@@ -15,6 +15,7 @@ import {
   Search,
   Shuffle,
   Target,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -84,6 +85,8 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [note, setNote] = useState('');
+  const [draftMinutes, setDraftMinutes] = useState('0');
+  const [draftSeconds, setDraftSeconds] = useState('0');
   const [difficulty, setDifficulty] = useState<'全部' | Difficulty>('全部');
   const [category, setCategory] = useState('全部专题');
   const [unmasteredOnly, setUnmasteredOnly] = useState(true);
@@ -92,6 +95,7 @@ export default function Home() {
   const fileInput = useRef<HTMLInputElement>(null);
   const currentRef = useRef<Problem | null>(null);
   const secondsRef = useRef(0);
+  const poolRef = useRef<Problem[]>(problems);
   currentRef.current = current;
   secondsRef.current = seconds;
 
@@ -141,6 +145,7 @@ export default function Home() {
     }
     return result;
   }, [difficulty, category, unmasteredOnly, byProblem]);
+  poolRef.current = pool;
 
   const visibleProblems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -156,22 +161,41 @@ export default function Home() {
     setRunning(false);
     setFinishing(false);
     setNote('');
+    setDraftMinutes('0');
+    setDraftSeconds('0');
     setActiveView('练习');
+  }
+
+  function openFinish() {
+    setRunning(false);
+    setDraftMinutes(String(Math.floor(seconds / 60)));
+    setDraftSeconds(String(seconds % 60));
+    setFinishing(true);
   }
 
   function finish(result: Result) {
     if (!current) return;
+    const duration = Math.max(0, (Number.parseInt(draftMinutes, 10) || 0) * 60 + (Number.parseInt(draftSeconds, 10) || 0));
     setAttempts((items) => [{
       id: crypto.randomUUID(),
       problemId: current.id,
-      duration: seconds,
+      duration,
       result,
       note: note.trim(),
       createdAt: new Date().toISOString(),
     }, ...items]);
+    setCurrent(pickRandom(poolRef.current, current.id));
+    setSeconds(0);
     setFinishing(false);
     setRunning(false);
     setNote('');
+    setDraftMinutes('0');
+    setDraftSeconds('0');
+  }
+
+  function deleteAttempt(id: string) {
+    if (!window.confirm('确定删除这条练习记录吗？')) return;
+    setAttempts((items) => items.filter((attempt) => attempt.id !== id));
   }
 
   function exportData() {
@@ -256,10 +280,13 @@ export default function Home() {
         if (!Number.isInteger(duration) || duration < 0) throw new Error('用时必须是非负整数秒');
         const attempt: Attempt = { id: crypto.randomUUID(), problemId: selected.id, duration, result: value.result!, note: (value.note ?? '').slice(0, 500), createdAt: new Date().toISOString() };
         setAttempts((items) => [attempt, ...items]);
+        const next = pickRandom(poolRef.current, selected.id);
+        setCurrent(next);
+        setSeconds(0);
         setRunning(false);
         setFinishing(false);
         setNote('');
-        return { problemId: selected.id, title: selected.title, result: attempt.result, durationSeconds: duration, saved: true };
+        return { problemId: selected.id, title: selected.title, result: attempt.result, durationSeconds: duration, saved: true, nextProblem: { id: next.id, title: next.title } };
       },
     }, { signal: lifecycle.signal })).catch(() => undefined);
 
@@ -345,10 +372,17 @@ export default function Home() {
                     </div>
                   </div>
                   {!finishing ? (
-                    <Button className="finish-button" size="lg" variant="outline" onClick={() => { setRunning(false); setFinishing(true); }}>结束本次练习<ChevronRight /></Button>
+                    <Button className="finish-button" size="lg" variant="outline" onClick={openFinish}>结束本次练习<ChevronRight /></Button>
                   ) : (
                     <div className="finish-panel">
                       <div><strong>这次结果如何？</strong><button onClick={() => setFinishing(false)} aria-label="取消记录"><X /></button></div>
+                      <div className="duration-editor">
+                        <label><Clock3 />本次用时</label>
+                        <div>
+                          <label><input aria-label="用时分钟" type="number" min="0" value={draftMinutes} onChange={(event) => setDraftMinutes(event.target.value)} /><span>分</span></label>
+                          <label><input aria-label="用时秒数" type="number" min="0" max="59" value={draftSeconds} onChange={(event) => setDraftSeconds(event.target.value)} /><span>秒</span></label>
+                        </div>
+                      </div>
                       <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="可选：记下卡住的地方、关键思路……" rows={2} />
                       <div className="result-buttons">
                         <button className="pass" onClick={() => finish('通过')}><Check />通过</button>
@@ -373,7 +407,7 @@ export default function Home() {
               <div className="recent-list">
                 {attempts.slice(0, 5).map((attempt) => {
                   const problem = problems.find((item) => item.id === attempt.problemId)!;
-                  return <button key={attempt.id} onClick={() => draw(problem)}><span className={resultStyle[attempt.result]} /> <div><strong>{problem.id}. {problem.title}</strong><small>{new Date(attempt.createdAt).toLocaleDateString('zh-CN')} · {formatTime(attempt.duration)}</small></div><span>{attempt.result}</span></button>;
+                  return <div className="recent-entry" key={attempt.id}><button className="recent-problem" onClick={() => draw(problem)}><span className={resultStyle[attempt.result]} /> <div><strong>{problem.id}. {problem.title}</strong><small>{new Date(attempt.createdAt).toLocaleDateString('zh-CN')} · {formatTime(attempt.duration)}</small></div><span>{attempt.result}</span></button><button className="delete-attempt" onClick={() => deleteAttempt(attempt.id)} aria-label={`删除 ${problem.title} 的记录`} title="删除记录"><Trash2 /></button></div>;
                 })}
                 {!attempts.length && <div className="empty-small">完成第一道题后，记录会出现在这里。</div>}
               </div>

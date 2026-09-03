@@ -119,6 +119,13 @@ h1 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); color: var(--ink); letter-s
 .finish-panel > div:first-child { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink); }
 .finish-panel > div:first-child button { border: 0; background: transparent; padding: 0; }
 .finish-panel > div:first-child svg { width: 15px; }
+.duration-editor { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.duration-editor > label { display: flex; align-items: center; gap: 6px; color: #77746e; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.duration-editor > label svg { width: 14px; color: var(--orange); }
+.duration-editor > div { display: flex; gap: 7px; }
+.duration-editor > div label { height: 34px; display: flex; align-items: center; border: 1px solid var(--line); background: var(--card); }
+.duration-editor input { width: 53px; height: 100%; border: 0; background: transparent; padding: 0 7px; text-align: right; outline-color: var(--orange); font: 600 13px var(--font-geist-mono); color: var(--ink); }
+.duration-editor label span { padding-right: 8px; color: #89867f; font-size: 10px; }
 .finish-panel textarea { width: 100%; resize: vertical; margin: 12px 0; border: 1px solid var(--line); background: var(--card); padding: 10px; font-size: 12px; outline-color: var(--orange); }
 .result-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .result-buttons button { height: 36px; border: 0; display: flex; align-items: center; justify-content: center; gap: 5px; color: white; font-weight: 700; font-size: 12px; }
@@ -137,12 +144,17 @@ h1 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); color: var(--ink); letter-s
 .recent-heading svg { width: 14px; color: var(--orange); }
 .recent-heading button { border: 0; background: transparent; color: #77746e; font-size: 10px; padding: 0; }
 .recent-list { border-top: 1px solid var(--line); }
-.recent-list > button { width: 100%; display: grid; grid-template-columns: 7px 1fr auto; gap: 10px; align-items: center; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 13px 0; text-align: left; }
-.recent-list > button > span:first-child { width: 7px; height: 7px; border-radius: 50%; }
+.recent-entry { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.recent-problem { min-width: 0; flex: 1; display: grid; grid-template-columns: 7px 1fr auto; gap: 10px; align-items: center; background: transparent; border: 0; padding: 13px 6px 13px 0; text-align: left; }
+.recent-problem > span:first-child { width: 7px; height: 7px; border-radius: 50%; }
 .recent-list strong, .recent-list small { display: block; }
 .recent-list strong { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 165px; }
 .recent-list small { color: #918e87; font-size: 9px; margin-top: 4px; }
-.recent-list > button > span:last-child { font-size: 9px; color: #77746e; }
+.recent-problem > span:last-child { font-size: 9px; color: #77746e; }
+.delete-attempt { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border: 0; background: transparent; color: #aaa59c; opacity: 0; transition: .15s ease; }
+.recent-entry:hover .delete-attempt, .delete-attempt:focus-visible { opacity: 1; }
+.delete-attempt:hover { color: var(--red); background: #f2dfdc; }
+.delete-attempt svg { width: 13px; }
 .result-pass { background: var(--green); }
 .result-fail { background: var(--red); }
 .result-review { background: var(--yellow); }
@@ -204,6 +216,8 @@ footer svg { width: 12px; }
   .timer-block { grid-template-columns: 1fr; gap: 20px; }
   .timer-actions { grid-column: 1; }
   .timer-actions button { flex: 1; }
+  .duration-editor { align-items: flex-start; flex-direction: column; }
+  .delete-attempt { opacity: 1; }
   .library-view, .history-view { padding: 34px 18px 90px; }
   .view-heading { align-items: stretch; flex-direction: column; gap: 18px; }
   .search-box { width: 100%; }
