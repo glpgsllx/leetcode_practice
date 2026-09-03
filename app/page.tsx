@@ -96,6 +96,8 @@ export default function Home() {
   const currentRef = useRef<Problem | null>(null);
   const secondsRef = useRef(0);
   const poolRef = useRef<Problem[]>(problems);
+  const timerStartedAtRef = useRef<number | null>(null);
+  const timerBaseSecondsRef = useRef(0);
   currentRef.current = current;
   secondsRef.current = seconds;
 
@@ -116,8 +118,20 @@ export default function Home() {
 
   useEffect(() => {
     if (!running) return;
-    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000);
-    return () => window.clearInterval(timer);
+    const syncElapsedTime = () => {
+      if (timerStartedAtRef.current === null) return;
+      const elapsed = Math.floor((Date.now() - timerStartedAtRef.current) / 1000);
+      setSeconds(timerBaseSecondsRef.current + elapsed);
+    };
+    syncElapsedTime();
+    const timer = window.setInterval(syncElapsedTime, 500);
+    document.addEventListener('visibilitychange', syncElapsedTime);
+    window.addEventListener('focus', syncElapsedTime);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', syncElapsedTime);
+      window.removeEventListener('focus', syncElapsedTime);
+    };
   }, [running]);
 
   const byProblem = useMemo(() => {
@@ -158,6 +172,8 @@ export default function Home() {
   function draw(problem?: Problem) {
     setCurrent(problem ?? pickRandom(pool, current?.id));
     setSeconds(0);
+    timerStartedAtRef.current = null;
+    timerBaseSecondsRef.current = 0;
     setRunning(false);
     setFinishing(false);
     setNote('');
@@ -166,10 +182,40 @@ export default function Home() {
     setActiveView('练习');
   }
 
-  function openFinish() {
+  function getElapsedSeconds() {
+    if (!running || timerStartedAtRef.current === null) return seconds;
+    return timerBaseSecondsRef.current + Math.floor((Date.now() - timerStartedAtRef.current) / 1000);
+  }
+
+  function toggleTimer() {
+    if (running) {
+      const elapsed = getElapsedSeconds();
+      setSeconds(elapsed);
+      timerStartedAtRef.current = null;
+      timerBaseSecondsRef.current = elapsed;
+      setRunning(false);
+      return;
+    }
+    timerBaseSecondsRef.current = seconds;
+    timerStartedAtRef.current = Date.now();
+    setRunning(true);
+  }
+
+  function resetTimer() {
+    timerStartedAtRef.current = null;
+    timerBaseSecondsRef.current = 0;
     setRunning(false);
-    setDraftMinutes(String(Math.floor(seconds / 60)));
-    setDraftSeconds(String(seconds % 60));
+    setSeconds(0);
+  }
+
+  function openFinish() {
+    const elapsed = getElapsedSeconds();
+    setSeconds(elapsed);
+    timerStartedAtRef.current = null;
+    timerBaseSecondsRef.current = elapsed;
+    setRunning(false);
+    setDraftMinutes(String(Math.floor(elapsed / 60)));
+    setDraftSeconds(String(elapsed % 60));
     setFinishing(true);
   }
 
@@ -186,6 +232,8 @@ export default function Home() {
     }, ...items]);
     setCurrent(pickRandom(poolRef.current, current.id));
     setSeconds(0);
+    timerStartedAtRef.current = null;
+    timerBaseSecondsRef.current = 0;
     setFinishing(false);
     setRunning(false);
     setNote('');
@@ -249,6 +297,8 @@ export default function Home() {
         const selected = pickRandom(eligible, currentRef.current?.id);
         setCurrent(selected);
         setSeconds(0);
+        timerStartedAtRef.current = null;
+        timerBaseSecondsRef.current = 0;
         setRunning(false);
         setFinishing(false);
         setActiveView('练习');
@@ -283,6 +333,8 @@ export default function Home() {
         const next = pickRandom(poolRef.current, selected.id);
         setCurrent(next);
         setSeconds(0);
+        timerStartedAtRef.current = null;
+        timerBaseSecondsRef.current = 0;
         setRunning(false);
         setFinishing(false);
         setNote('');
@@ -365,10 +417,10 @@ export default function Home() {
                     <p><Clock3 />本次用时</p>
                     <output aria-live="polite">{formatTime(seconds)}</output>
                     <div className="timer-actions">
-                      <Button size="lg" onClick={() => setRunning((value) => !value)}>
+                      <Button size="lg" onClick={toggleTimer}>
                         {running ? <><Pause />暂停</> : <><Play />{seconds ? '继续' : '开始计时'}</>}
                       </Button>
-                      <Button size="lg" variant="outline" onClick={() => { setRunning(false); setSeconds(0); }}><RotateCcw />归零</Button>
+                      <Button size="lg" variant="outline" onClick={resetTimer}><RotateCcw />归零</Button>
                     </div>
                   </div>
                   {!finishing ? (
